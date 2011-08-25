@@ -1,0 +1,64 @@
+#!/usr/bin/python
+
+# Usage: auto path childProgram [childArg1 childArg2 ...]
+#
+# I run `childProgram`, passing in the `childArgN` arguments given.
+# Then I watch for any change to the directory tree rooted at `path`.
+# Whenever I see a change, I run `childProgram` with its arguments
+# again.
+#
+# I wait 100 milliseconds after seeing a change before running the
+# program. Additional changes in that period won't make me run the
+# program extra times.
+#
+# For example, to run 'make' whenever the current directory changes:
+#
+#   auto . make
+#
+# To run 'make install' whenever the 'src' subdirectory changes:
+#
+#   auto src make install
+#
+# I don't use the shell automatically, so if you need it, you have to ask for it:
+#
+#   auto src sh -c 'cd build && make -f ../Makefile install'
+#
+
+# Note: FSEvents is part of pyobjc, which comes with the Apple-supplied Python.
+# This script is based on watcher.py:
+#http://svn.red-bean.com/pyobjc/trunk/pyobjc/pyobjc-framework-FSEvents/Examples/watcher.py
+
+from FSEvents import *
+import subprocess
+import signal
+import sys
+
+# Python catches SIGINT by default.  I want it to just make me exit.
+signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+path = sys.argv[1:]
+childArgv = sys.argv[2:]
+
+def runChild():
+    subprocess.call(childArgv)
+
+def fsEventDidHappen(stream, clientInfo, numEvents, eventPaths, eventFlags, eventIds):
+    runChild()
+
+stream = FSEventStreamCreate(
+       kCFAllocatorDefault, # allocator
+       fsEventDidHappen, # callback
+       None, # context
+       [ path ], # pathsToWatch
+       kFSEventStreamEventIdSinceNow, # sinceWhen
+       0.1, # latency
+       kFSEventStreamCreateFlagNone # flags
+)
+FSEventStreamScheduleWithRunLoop(stream, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode)
+if not FSEventStreamStart(stream):
+   sys.stderr.write('FSEventStreamStart failed')
+   sys.exit(1)
+
+runChild()
+CFRunLoopRun()
+
