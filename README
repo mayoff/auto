@@ -1,7 +1,0 @@
-
-This is a Mac OS X program that watches for any changes to a directory tree.  Whenever it sees a change, it runs a program.  For example, you can use it to run 'make' whenever you change your source code.
-
-Usage details can be found at the top of the script.
-
-It's implemented as a Python script using the Mac OS X FSEvents library.
-
